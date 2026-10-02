@@ -64,7 +64,7 @@ export function normalizeApify(data) {
     const pc=r.prices?.pc?.lowestPrice;
     // Keep invalid entries for transparent filtering. Never fall back to console prices.
     return {game:match?.[1]==='27'?'fc27':'unsupported',platform:'pc',card_id:match?.[2]??url,
-      name:String(r.playerName??'Unknown player'),version:String(r.version??r.rarity??'Card '+(match?.[2]??'unknown')),
+      rating:Number.isFinite(r.rating)?r.rating:null,name:String(r.playerName??'Unknown player').replace(/ EA FC 27 Prices and Rating$/i,''),version:String(r.version??r.rarity??'Card '+(match?.[2]??'unknown')),
       data_kind:'reference',market_price:pc,updated_at:r.scrapedAt,source_url:match?url:undefined};
   });
 }
