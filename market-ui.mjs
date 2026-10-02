@@ -1,6 +1,6 @@
 import {positionValue} from './features.mjs';
 import {loadMarket} from './cloud.mjs';
-import {mergeHistory,mergeAverageHistory,averageContext,analyze,validateBackup} from './market.mjs';
+import {mergeHistory,mergeAverageHistory,averageContext,analyze,validateBackup} from './market.mjs?v=20261002-3';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString('pl-PL'),key='fcscanner-market-v1';
 let history={},events=[],selected=null,isDemo=false,realState=null;
 let chartKind='daily';
@@ -48,7 +48,7 @@ function render(){
  $('historyCount').textContent=Object.keys(history).length;$('pointCount').textContent=Object.values(history).reduce((n,c)=>n+c.points.length+(c.averages?.daily.length||0)+(c.averages?.hourly.length||0),0);$('eventCount').textContent=events.filter(e=>e.start<=Date.now()&&e.end>Date.now()).length;
  $('analysisRows').replaceChildren();
  const cards=Object.values(history).sort((a,b)=>(b.points.at(-1)?.t??0)-(a.points.at(-1)?.t??0));
- for(const c of cards){const a=analyze(c,events),tr=document.createElement('tr');const values=[c.name,c.version,a.last?fmt(a.last.price):'Brak bieżącej ceny',a.delta6==null?'—':a.delta6.toFixed(1)+'%',a.direction==='Za mało danych'?'Za mało bieżących odczytów':a.direction];
+ for(const c of cards){const a=analyze(c,events),tr=document.createElement('tr');const values=[c.name,c.version,a.last?fmt(a.last.price):'Brak bieżącej ceny',a.analysisChange!=null?a.analysisChange.toFixed(1)+'% / '+a.analysisSpan.toFixed(0)+' h':a.delta6==null?'—':a.delta6.toFixed(1)+'% / 6 h',a.direction==='Za mało danych'?'Za mało bieżących odczytów':a.direction];
  for(const val of values){const td=document.createElement('td');td.textContent=val;tr.append(td);}const td=document.createElement('td'),button=document.createElement('button');button.className='secondary';button.textContent='Analizuj';button.onclick=()=>detail(c.id);td.append(button);tr.append(td);$('analysisRows').append(tr);}
  $('analysisEmpty').hidden=cards.length>0;$('analysisTable').hidden=!cards.length;
  $('eventsList').replaceChildren();for(const e of events.toSorted((a,b)=>b.start-a.start)){const li=document.createElement('li'),text=document.createElement('span');text.textContent=`${e.title} · ${new Date(e.start).toLocaleString('pl-PL')} · ${e.end>Date.now()?'aktywne/zaplanowane':'zakończone'} · ${e.scope==='ids'?'karty '+e.ids.join(', '):e.scope}`;li.append(text);if(e.url){const link=document.createElement('a');link.href=e.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Źródło';li.append(link);}const del=document.createElement('button');del.className='secondary';del.textContent=e.cloud?'W chmurze':'Usuń';del.disabled=!!e.cloud;del.onclick=()=>{events=events.filter(v=>v.id!==e.id);persist();render();};li.append(del);$('eventsList').append(li);}
