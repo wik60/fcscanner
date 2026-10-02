@@ -27,3 +27,14 @@ $('feedForm').addEventListener('submit',async e=>{e.preventDefault();const butto
 $('cardForm').addEventListener('submit',e=>{e.preventDefault();try{const observation=Object.fromEntries(new FormData(e.target));const id=`manual:${observation.name.toLowerCase()}:${observation.version.toLowerCase()}`;const item={...observation,card_id:id,game:'fc27',platform:'pc',updated_at:new Date().toISOString()};const next=demo?[item]:[...rows.filter(r=>r.card_id!==id),item];setData(next,'Your PC observations');e.target.reset();message('Observation added. Buy limits are estimates; check the current market.');}catch(e){message(e.message,true);}});
 $('export').addEventListener('click',()=>{if(!latest)return;const blob=new Blob([JSON.stringify({demo,source:origin,generated_at:new Date().toISOString(),...latest},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=demo?'fictional-demo-picks.json':'pc-watchlist.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 setInterval(render,60000);render();
+
+function receiveCloud(data){
+ if(demo)return;
+ const latestRows=new Map();
+ for(const r of data.rows){const old=latestRows.get(r.card_id);if(!old||Date.parse(r.updated_at)>Date.parse(old.updated_at))latestRows.set(r.card_id,r);}
+ try{setData([...latestRows.values()].map(r=>({...r,data_kind:'reference'})),'Supabase · ceny PC');
+ $('source').textContent=latestRows.size+' kart z odczytami cen · '+data.averages.length+' punktów historii · szczegóły w Analizatorze rynku';
+ }catch(e){message('Nie udało się wczytać cen z chmury: '+e.message,true);}
+}
+window.addEventListener('fc-cloud',e=>receiveCloud(e.detail));
+if(window.fcscannerCloud)receiveCloud(window.fcscannerCloud);
