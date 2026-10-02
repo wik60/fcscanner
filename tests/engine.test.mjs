@@ -17,3 +17,5 @@ const ap=rank(normalized,{now});assert.equal(ap.picks[0].maxBuy,4000);assert.equ
 assert.equal(rank(normalizeApify([{...raw,prices:{console:{lowestPrice:3000}}}]),{now}).picks.length,0);
 assert.equal(rank(normalizeApify([{...raw,url:'https://www.futbin.com/26/player/123/example'}]),{now}).picks.length,0);
 console.log('Apify schema import checks passed; no live Actor run tested.');
+
+assert.equal(rank(normalizeApify([{...raw,prices:{pc:{lowestPrice:8000000}}}]),{now}).picks.length,0);
