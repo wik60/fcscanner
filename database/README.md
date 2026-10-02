@@ -1,13 +1,13 @@
-# Supabase database preparation
+# FC Scanner Supabase
 
-Status: schema prepared, not applied. Creation of a separate free project was rejected because the account has two active free projects. Choose a target project before applying schema.sql.
+Deployed in wik60's Project (ztxbktelvqfisafywmvx), isolated schema fcscanner. Applied migration create_fcscanner_market contains schema.sql plus public-views.sql. Do not rerun schema.sql on this project.
 
-The isolated fcscanner schema stores FC27 card versions, timestamped PC prices, manually verified market events and model-versioned signals for future backtesting. It does not modify existing application tables or Auth configuration.
+Three original user Apify observations were seeded with their original timestamps. Public views fcscanner_prices and fcscanner_events use security_invoker=true and read-only grants. All four underlying tables have RLS. Verified REST returns three prices and anon has no INSERT privilege. Security advisors found no issues on FC Scanner objects; existing Matura/Auth findings belong to the pre-existing project.
 
-Run schema.sql once through a migration on the chosen project, verify constraints and RLS, and run Supabase security advisors. Add fcscanner to the Data API exposed schemas before connecting the frontend. Market tables allow public SELECT only; writes require a trusted server importer. Never put service-role or secret keys in GitHub Pages. Personal portfolios and account data are not part of these public tables.
+cloud.mjs reads central prices/events every five minutes with a public publishable key. No secret or service-role key is in the frontend. Current manual imports, categories and form events remain browser-local. The signals table is prepared, but no scheduler writes signals yet. Automatic FUTBIN/Apify ingestion is not enabled.
 
-The current app still uses local storage. No cloud connection, automatic imports, signal scheduler or backtesting is enabled by this draft.
+The public schema views avoid changing existing Data API exposure settings. Existing Matura tables and Auth configuration were not modified.
 
-## rfutbin assessment
+## rfutbin
 
-Reviewed https://github.com/danielredondo/rfutbin: MIT-licensed R scraper. futbin_search.R hardcodes FIFA21 /21/players and parses the first HTML table via httr/rvest. It has no solution for HTTP403, no FC27 compatibility verification and no market event analysis. Reuse ideas or adapt selected code with the MIT notice; do not treat it as a working live FC27 feed.
+https://github.com/danielredondo/rfutbin is an MIT-licensed R scraper. futbin_search.R hardcodes FIFA21 /21/players and parses HTML via httr/rvest. It does not resolve HTTP403. FC27 compatibility was not verified; do not treat it as a working live feed.
