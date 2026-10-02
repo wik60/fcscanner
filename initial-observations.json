@@ -1,0 +1,32 @@
+[
+  {
+    "game": "fc27",
+    "platform": "pc",
+    "card_id": "78",
+    "name": "GABRIEL",
+    "version": "Card 78",
+    "market_price": 15000,
+    "updated_at": "2026-10-02T02:31:18.137Z",
+    "source_url": "https://www.futbin.com/27/player/78/gabriel-dos-s-magalhaes"
+  },
+  {
+    "game": "fc27",
+    "platform": "pc",
+    "card_id": "53",
+    "name": "BRUNO FERNANDES",
+    "version": "Card 53",
+    "market_price": 17000,
+    "updated_at": "2026-10-02T02:31:18.282Z",
+    "source_url": "https://www.futbin.com/27/player/53/bruno-miguel-borges-fernandes"
+  },
+  {
+    "game": "fc27",
+    "platform": "pc",
+    "card_id": "738",
+    "name": "SALAH",
+    "version": "Card 738",
+    "market_price": 5700,
+    "updated_at": "2026-10-02T02:31:21.928Z",
+    "source_url": "https://www.futbin.com/27/player/738/mohamed-salah"
+  }
+]
