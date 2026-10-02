@@ -33,9 +33,11 @@ def latest_dataset(token):
 def import_rows(cards,prices):
     root=os.environ['SUPABASE_URL'].rstrip('/')+'/rest/v1/'
     secret=os.environ['SUPABASE_SERVICE_ROLE_KEY']
-    headers={'apikey':secret,'Authorization':'Bearer '+secret,'Content-Type':'application/json','Content-Profile':'fcscanner','Prefer':'resolution=ignore-duplicates,return=minimal'}
-    for table,rows,conflict in [('cards',cards,'game,card_id'),('price_observations',prices,'game,card_id,platform,observed_at')]:
-        for offset in range(0,len(rows),500):request(root+table+'?on_conflict='+conflict,headers,rows[offset:offset+500])
+    headers={'apikey':secret,'Authorization':'Bearer '+secret,'Content-Type':'application/json'}
+    for offset in range(0,len(prices),500):
+        batch=prices[offset:offset+500]
+        ids={p['card_id'] for p in batch}
+        request(root+'rpc/import_fcscanner_prices',headers,{'cards':[c for c in cards if c['card_id'] in ids],'prices':batch})
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--file');parser.add_argument('--dry-run',action='store_true');args=parser.parse_args()
     if args.file:
