@@ -15,3 +15,16 @@ assert.equal(Object.keys(mergeHistory({},[{...rows[0],market_price:0}])).length,
 assert.equal(validateBackup({schema:1,history,events:[event]}).events.length,1);
 assert.throws(()=>validateBackup({schema:1,history:{bad:{id:'bad',name:'x',category:'unknown',points:[{t:1,price:NaN}]}},events:[]}));
 console.log('Market history and event signal checks passed.');
+
+const avgCard={id:'avg',name:'Average only',category:'unknown',points:[],averages:{hourly:Array.from({length:5},(_,i)=>({t:now-(4-i)*H,price:1000+i*100})),daily:[]}};
+const avgResult=analyze(avgCard,[],now);
+assert.equal(avgResult.basis,'hourly');assert.equal(avgResult.analysisPoints.length,4);
+assert.match(avgResult.direction,/Trend wzrostowy/);assert.equal(avgResult.last,undefined);
+assert.equal(avgResult.delta6,null);assert.equal(avgResult.points.length,0);
+const dailyCard={...avgCard,averages:{hourly:[],daily:Array.from({length:8},(_,i)=>({t:now-(8-i)*24*H,price:2000-i*100}))}};
+assert.equal(analyze(dailyCard,[],now).basis,'daily');
+assert.match(analyze(dailyCard,[],now).direction,/Trend spadkowy/);
+assert.match(analyze(dailyCard,[],now+100*H).direction,/Historyczny trend/);
+assert.equal(analyze({...avgCard,averages:{hourly:avgCard.averages.hourly.slice(-3),daily:[]}},[],now).basis,undefined);
+assert.equal(analyze({...dailyCard,points:history['1'].points},[],now).basis,'live');
+console.log('Hourly/daily fallback, completed buckets, stale history and live precedence passed.');
