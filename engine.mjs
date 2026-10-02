@@ -20,7 +20,8 @@ export function rank(rows, {budget=200000,reserve=100000,minProfit=500,minRoi=.0
       const reference=r.data_kind==='reference';
       const market=num('market_price');
       const buy=reference?market:num('buy_price'),prior=reference?market:num('price_1h_ago'),samples=reference?null:num('samples');
-      if(Math.min(buy,market,prior)<150)fail('Price below 150');
+      if(Math.min(buy,market,prior)<150)fail('Missing market price (zero) or price below 150');
+      if(reference&&market>position)fail('Reference price exceeds your per-card budget');
       if(!reference&&floorPrice(buy)!==buy)fail('Invalid buy-price increment');
       if(!reference&&samples<3)fail('Need at least 3 comparable listings');
       const trend=market/prior-1;if(trend< -.05)fail('Price dropped more than 5% in one hour');
