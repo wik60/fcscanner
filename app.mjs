@@ -1,25 +1,26 @@
+import {recommend} from './recommendations.mjs?v=20261002-4';
 import {rank,parseCSV,normalizeInput} from './engine.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString('en-GB');
-let rows=[],demo=false,origin='No price data connected',latest=null;
+let rows=[],demo=false,origin='No price data connected',latest=null,cloudData=null;
 function message(text,error=false){$('message').textContent=text;$('message').classList.toggle('error',error);}
 function options(){return {budget:Number($('budget').value),reserve:Number($('reserve').value),minProfit:Number($('minProfit').value),minRoi:Number($('minRoi').value)/100};}
 function cell(tr,value){const td=document.createElement('td');td.textContent=value;tr.append(td);return td;}
 function render(){
  try{
-  const o=options(),result=rank(rows,o);latest=result;
+  const o=options(),result=!demo&&cloudData?recommend(cloudData,o):rank(rows,o);latest=result;
   $('allocation').textContent=fmt(o.budget-o.reserve);$('count').textContent=result.picks.filter(p=>p.actionable).length;
   $('spend').textContent=fmt(o.budget-o.reserve-result.remaining);
   $('mode').textContent=demo?'FICTIONAL DEMO — not live recommendations':origin;
-  $('source').textContent=rows.length?`${rows.length} observations · freshness checked ${new Date().toLocaleTimeString()} · PC only`:'Import fresh PC observations to find your buy limits.';
+  $('source').textContent=cloudData&&!demo?result.picks.filter(p=>p.actionable).length+' kandydatów przy ostatniej cenie · '+result.picks.filter(p=>!p.actionable).length+' celów do wyszukania taniej · PC · aktualizacja co 5 min':rows.length?`${rows.length} observations · freshness checked ${new Date().toLocaleTimeString()} · PC only`:'Import fresh PC observations to find your buy limits.';
   $('picks').replaceChildren();
-  for(const p of result.picks){const tr=document.createElement('tr'),name=cell(tr,p.name),sub=document.createElement('small');sub.textContent=p.version;name.append(sub);if(p.source_url){const a=document.createElement('a');a.href=p.source_url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='FUTBIN';name.append(a);}const action=cell(tr,''),tag=document.createElement('span');tag.className='tag'+(p.actionable?'':' wait');tag.textContent=p.reference?'Price target':p.actionable?'Buy candidate':'Bid target';action.append(tag);cell(tr,fmt(p.maxBuy));cell(tr,fmt(p.sell));cell(tr,fmt(p.profit)+(p.reference?'*':''));cell(tr,`${(p.roi*100).toFixed(1)}%`);cell(tr,p.copies);tr.title=p.reference?`Reference price ${fmt(p.buy)} · scrape age ${p.age.toFixed(1)} min · no auction or volume verified`:`Observed buy ${fmt(p.buy)} · Price age ${p.age.toFixed(1)} min`; $('picks').append(tr);}
+  for(const p of result.picks){const tr=document.createElement('tr'),name=cell(tr,p.name),sub=document.createElement('small');sub.textContent=p.version;name.append(sub);if(p.source_url){const a=document.createElement('a');a.href=p.source_url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='FUTBIN';name.append(a);}const action=cell(tr,''),tag=document.createElement('span');tag.className='tag'+(p.actionable?'':' wait');tag.textContent=cloudData&&!demo?(p.actionable?'Kandydat — sprawdź ofertę':'Szukaj poniżej limitu'):p.reference?'Cel ceny':p.actionable?'Kandydat do zakupu':'Cel licytacji';action.append(tag);cell(tr,fmt(p.maxBuy));cell(tr,fmt(p.sell));cell(tr,fmt(p.profit)+(p.reference?'*':''));cell(tr,`${(p.roi*100).toFixed(1)}%`);cell(tr,p.copies);if(cloudData&&!demo){const why=cell(tr,p.reason);why.title='Niska pewność. Brak danych o wolumenie i dostępnych aukcjach.';}else cell(tr,'Dane zaimportowane ręcznie / przykład.');tr.title=p.reference?`Reference price ${fmt(p.buy)} · scrape age ${p.age.toFixed(1)} min · no auction or volume verified`:`Observed buy ${fmt(p.buy)} · Price age ${p.age.toFixed(1)} min`; $('picks').append(tr);}
   $('tableWrap').hidden=!result.picks.length;$('empty').hidden=Boolean(result.picks.length);
-  $('empty').querySelector('h3').textContent=rows.length?'No eligible cards in this snapshot.':'Start with cards you know.';
+  $('empty').querySelector('h3').textContent=cloudData&&!demo?'Teraz brak okazji spełniających Twoje warunki.':rows.length?'Brak kart spełniających warunki.':'Wczytaj ceny kart.';
   $('rejected').replaceChildren();for(const r of result.rejected){const li=document.createElement('li');li.textContent=`${r.name}: ${r.reason}`;$('rejected').append(li);}
   $('filteredCount').textContent=result.rejected.length;$('export').disabled=!result.picks.length;
  }catch(e){latest=null;$('picks').replaceChildren();$('tableWrap').hidden=true;$('export').disabled=true;message(e.message,true);}
 }
-function setData(data,label,isDemo=false){data=normalizeInput(data);rank(data,options());rows=data;demo=isDemo;origin=label;message('');render();window.dispatchEvent(new CustomEvent('fc-prices',{detail:{rows,demo}}));}
+function setData(data,label,isDemo=false){cloudData=null;data=normalizeInput(data);rank(data,options());rows=data;demo=isDemo;origin=label;message('');render();window.dispatchEvent(new CustomEvent('fc-prices',{detail:{rows,demo}}));}
 $('settings').addEventListener('submit',e=>{e.preventDefault();message('');render();});
 $('demo').addEventListener('click',async()=>{try{const r=await fetch('./sample.json');if(!r.ok)throw new Error('Cannot load demo.');const sample=await r.json();sample.forEach(row=>row.updated_at=new Date().toISOString());setData(sample,'Fictional sample',true);}catch(e){message(e.message,true);}});
 $('file').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>5000000)throw new Error('Maximum file size is 5 MB.');const text=await f.text();setData(f.name.toLowerCase().endsWith('.csv')?parseCSV(text):JSON.parse(text),`Imported file: ${f.name}`);}catch(e){message(e.message,true);}finally{e.target.value='';}});
@@ -33,7 +34,7 @@ function receiveCloud(data){
  const latestRows=new Map();
  for(const r of data.rows){const old=latestRows.get(r.card_id);if(!old||Date.parse(r.updated_at)>Date.parse(old.updated_at))latestRows.set(r.card_id,r);}
  try{setData([...latestRows.values()].map(r=>({...r,data_kind:'reference'})),'Supabase · ceny PC');
- $('source').textContent=latestRows.size+' kart z odczytami cen · '+data.averages.length+' punktów historii · szczegóły w Analizatorze rynku';
+ cloudData=data;render();
  }catch(e){message('Nie udało się wczytać cen z chmury: '+e.message,true);}
 }
 window.addEventListener('fc-cloud',e=>receiveCloud(e.detail));
