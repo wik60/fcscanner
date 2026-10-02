@@ -4,9 +4,15 @@ No Actor runs are started. Never print credentials or authenticated URLs.
 import os,json,re,sys,argparse
 from datetime import datetime,timezone
 from urllib.request import Request,urlopen
+from urllib.error import HTTPError
+from urllib.parse import urlsplit
 def request(url,headers=None,data=None):
     req=Request(url,headers=headers or {},data=None if data is None else json.dumps(data).encode())
-    with urlopen(req,timeout=30) as response:return json.loads(response.read() or b'null')
+    try:
+        with urlopen(req,timeout=30) as response:return json.loads(response.read() or b'null')
+    except HTTPError as e:
+        parsed=urlsplit(url)
+        raise RuntimeError('HTTP '+str(e.code)+' from '+parsed.hostname+parsed.path) from None
 def normalize(items):
     cards={};prices={}
     for item in items:
@@ -59,5 +65,5 @@ def main():
 if __name__=='__main__':
     try:main()
     except Exception as error:
-        print('Collector failed: '+type(error).__name__+'. Check source, secrets and schema configuration.',file=sys.stderr)
+        print('Collector failed: '+(str(error) if isinstance(error,RuntimeError) else type(error).__name__)+'. Check source, secrets and schema configuration.',file=sys.stderr)
         sys.exit(1)
