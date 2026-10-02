@@ -1,5 +1,8 @@
 name: Sync completed Apify prices
 on:
+  push:
+    branches: [main]
+    paths: ['collectors/**', '.github/workflows/sync-prices.yml']
   workflow_dispatch:
   schedule:
     - cron: '17,47 * * * *'
