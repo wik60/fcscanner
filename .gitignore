@@ -3,3 +3,8 @@ output/
 .env
 prices.csv
 prices.json
+
+local/browser-profile/
+local/.venv/
+local/browser-test-report.json
+local/confirmed-pc-prices.json
