@@ -13,6 +13,7 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/engine.test.mjs
+      - run: node tests/market.test.mjs
       - run: python scanner.py --demo
       - uses: actions/upload-artifact@v4
         with:
