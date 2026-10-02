@@ -17,17 +17,19 @@ export function rank(rows, {budget=200000,reserve=100000,minProfit=500,minRoi=.0
       if(!/(Z|[+-]\d{2}:\d{2})$/i.test(String(r.updated_at)))fail('Timestamp needs a timezone');
       const stamp=Date.parse(r.updated_at),age=(now-stamp)/60000;
       if(!Number.isFinite(age)||age< -1||age>maxAge)fail('Stale or future-dated prices');
-      const buy=num('buy_price'),market=num('market_price'),prior=num('price_1h_ago'),samples=num('samples');
+      const reference=r.data_kind==='reference';
+      const market=num('market_price');
+      const buy=reference?market:num('buy_price'),prior=reference?market:num('price_1h_ago'),samples=reference?null:num('samples');
       if(Math.min(buy,market,prior)<150)fail('Price below 150');
-      if(floorPrice(buy)!==buy)fail('Invalid buy-price increment');
-      if(samples<3)fail('Need at least 3 comparable listings');
+      if(!reference&&floorPrice(buy)!==buy)fail('Invalid buy-price increment');
+      if(!reference&&samples<3)fail('Need at least 3 comparable listings');
       const trend=market/prior-1;if(trend< -.05)fail('Price dropped more than 5% in one hour');
       const sell=floorPrice(market*(1-haircut)),net=Math.floor(sell*(1-tax));
       const maxBuy=floorPrice(Math.min(net-minProfit,net/(1+minRoi),position));
       if(maxBuy<150)fail('No affordable target');
-      const profit=net-buy,roi=profit/buy,actionable=buy<=maxBuy;
-      const score=(actionable?roi:(net-maxBuy)/maxBuy)*Math.min(samples/10,1)*Math.max(.2,1-Math.max(age,0)/maxAge);
-      picks.push({name:String(r.name??id),version:String(r.version??''),id,buy,maxBuy,sell,profit,roi,age,trend,actionable,score,copies:actionable?Math.min(3,Math.floor(position/buy)):0});
+      const profit=net-(reference?maxBuy:buy),roi=profit/(reference?maxBuy:buy),actionable=!reference&&buy<=maxBuy;
+      const score=(actionable?roi:(net-maxBuy)/maxBuy)*(reference?.25:Math.min(samples/10,1))*Math.max(.2,1-Math.max(age,0)/maxAge);
+      picks.push({name:String(r.name??id),version:String(r.version??''),id,buy,maxBuy,sell,profit,roi,age,trend,actionable,reference,source_url:r.source_url,score,copies:actionable?Math.min(3,Math.floor(position/buy)):0});
     } catch(e) { rejected.push({name:String(r?.name??'(unnamed)'),reason:e.message}); }
   }
   picks.sort((a,b)=>Number(b.actionable)-Number(a.actionable)||b.score-a.score);
@@ -50,4 +52,22 @@ export function parseCSV(text) {
   const required=['game','platform','card_id','name','buy_price','market_price','price_1h_ago','samples','updated_at'];
   if(required.some(k=>!headers.includes(k)))throw new Error('CSV is missing required columns. See the README.');
   return table.map(values=>{if(values.length!==headers.length)throw new Error('CSV row has an incorrect number of columns.');return Object.fromEntries(headers.map((k,i)=>[k,values[i]]));});
+}
+
+// Verified against the Actor's documented output schema; not a live-run verification.
+export function normalizeApify(data) {
+  if(!Array.isArray(data)) throw new Error('Apify export must be a JSON array.');
+  return data.map(r=>{
+    const url=String(r.url??'');
+    const match=url.match(/^https:\/\/(?:www\.)?futbin\.com\/(\d+)\/player\/(\d+)(?:\/|$)/);
+    const pc=r.prices?.pc?.lowestPrice;
+    // Keep invalid entries for transparent filtering. Never fall back to console prices.
+    return {game:match?.[1]==='27'?'fc27':'unsupported',platform:'pc',card_id:match?.[2]??url,
+      name:String(r.playerName??'Unknown player'),version:String(r.version??r.rarity??'Card '+(match?.[2]??'unknown')),
+      data_kind:'reference',market_price:pc,updated_at:r.scrapedAt,source_url:match?url:undefined};
+  });
+}
+export function normalizeInput(data) {
+  if(Array.isArray(data)&&data.some(r=>r&&('playerName' in r||'prices' in r)))return normalizeApify(data);
+  return data;
 }
