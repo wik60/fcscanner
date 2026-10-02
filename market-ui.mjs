@@ -1,3 +1,4 @@
+import {loadMarket} from './cloud.mjs';
 import {mergeHistory,analyze,validateBackup} from './market.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString('pl-PL'),key='fcscanner-market-v1';
 let history={},events=[],selected=null,isDemo=false,realState=null;
@@ -32,7 +33,7 @@ function render(){
  for(const c of cards){const a=analyze(c,events),tr=document.createElement('tr');const values=[c.name,c.version,fmt(a.last?.price??0),a.delta6===null?'—':a.delta6.toFixed(1)+'%',a.direction];
  for(const val of values){const td=document.createElement('td');td.textContent=val;tr.append(td);}const td=document.createElement('td'),button=document.createElement('button');button.className='secondary';button.textContent='Analizuj';button.onclick=()=>detail(c.id);td.append(button);tr.append(td);$('analysisRows').append(tr);}
  $('analysisEmpty').hidden=cards.length>0;$('analysisTable').hidden=!cards.length;
- $('eventsList').replaceChildren();for(const e of events.toSorted((a,b)=>b.start-a.start)){const li=document.createElement('li'),text=document.createElement('span');text.textContent=`${e.title} · ${new Date(e.start).toLocaleString('pl-PL')} · ${e.end>Date.now()?'aktywne/zaplanowane':'zakończone'} · ${e.scope==='ids'?'karty '+e.ids.join(', '):e.scope}`;li.append(text);if(e.url){const link=document.createElement('a');link.href=e.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Źródło';li.append(link);}const del=document.createElement('button');del.className='secondary';del.textContent='Usuń';del.onclick=()=>{events=events.filter(v=>v.id!==e.id);persist();render();};li.append(del);$('eventsList').append(li);}
+ $('eventsList').replaceChildren();for(const e of events.toSorted((a,b)=>b.start-a.start)){const li=document.createElement('li'),text=document.createElement('span');text.textContent=`${e.title} · ${new Date(e.start).toLocaleString('pl-PL')} · ${e.end>Date.now()?'aktywne/zaplanowane':'zakończone'} · ${e.scope==='ids'?'karty '+e.ids.join(', '):e.scope}`;li.append(text);if(e.url){const link=document.createElement('a');link.href=e.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Źródło';li.append(link);}const del=document.createElement('button');del.className='secondary';del.textContent=e.cloud?'W chmurze':'Usuń';del.disabled=!!e.cloud;del.onclick=()=>{events=events.filter(v=>v.id!==e.id);persist();render();};li.append(del);$('eventsList').append(li);}
  if(selected)detail(selected);
 }
 window.addEventListener('fc-prices',e=>{
@@ -50,3 +51,6 @@ $('analysisDemo').onclick=()=>{if(isDemo){history=realState.history;events=realS
 window.addEventListener('resize',()=>{if(selected)detail(selected);});setInterval(render,60000);render();
 // First-party file contains only user-supplied price observations; no credentials.
 (async()=>{try{const response=await fetch('./initial-observations.json');if(!response.ok)return;const seed=await response.json();if(isDemo&&realState)realState.history=mergeHistory(realState.history,seed);else{history=mergeHistory(history,seed);persist();render();}}catch{}})();
+
+async function refreshCloud(){try{const data=await loadMarket();const target=isDemo&&realState?realState:null;if(target){target.history=mergeHistory(target.history,data.rows);target.events=[...target.events.filter(e=>!e.cloud),...data.events];}else{history=mergeHistory(history,data.rows);events=[...events.filter(e=>!e.cloud),...data.events];persist();render();}say('Supabase: '+data.rows.length+' odczytów. Odczyt z chmury; nowe importy i wydarzenia formularza zapisują się lokalnie.');}catch(e){say('Nie udało się pobrać Supabase. Dostępna historia lokalna. '+e.message);}}
+refreshCloud();setInterval(refreshCloud,300000);
