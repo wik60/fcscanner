@@ -7,12 +7,34 @@ export function mergeHistory(history,rows){
   const t=Date.parse(r.updated_at),price=Number(r.market_price),id=String(r.card_id??'');
   if(r.game!=='fc27'||r.platform!=='pc'||!id||!Number.isFinite(t)||!Number.isFinite(price)||price<150)continue;
   const card=next[id]||{id,name:String(r.name??id).replace(/ EA FC 27 Prices and Rating$/i,''),version:String(r.version??''),category:'unknown',points:[]};
+  if(card.name==='Karta '+id){card.name=String(r.name??card.name);card.version=String(r.version??card.version);}
   const old=card.points.find(p=>p.t===t);if(!old)card.points.push({t,price});
   card.points.sort((a,b)=>a.t-b.t);card.points=card.points.slice(-500);
   card.rating=card.manualRating?card.rating:(r.rating??card.rating??null);card.source_url=r.source_url??card.source_url;
   next[id]=card;
  }
  return next;
+}
+export function mergeAverageHistory(history,rows){
+ const next=structuredClone(history||{});
+ for(const r of rows){
+ const id=String(r.card_id??''),kind=r.interval_kind,t=Date.parse(r.observed_at),price=Number(r.price);
+ if(r.game!=='fc27'||r.platform!=='pc'||!id||!['daily','hourly'].includes(kind)||!Number.isFinite(t)||!Number.isFinite(price)||price<150)continue;
+ const c=next[id]||{id,name:'Karta '+id,version:'',category:'unknown',points:[]};
+ c.averages??={daily:[],hourly:[]};
+ const series=c.averages[kind]||[];
+ const map=new Map(series.map(p=>[p.t,p]));map.set(t,{t,price});
+ c.averages[kind]=[...map.values()].sort((a,b)=>a.t-b.t).slice(-500);
+ c.source_url??=r.source_url;next[id]=c;
+ }
+ return next;
+}
+export function averageContext(card){
+ const series=card.averages||{};
+ return ['hourly','daily'].map(kind=>{
+ const p=series[kind]||[],last=p.at(-1),first=p[0];
+ return {kind,points:p,count:p.length,span:first&&last?(last.t-first.t)/HOUR:0,change:p.length>1?(last.price/first.price-1)*100:null};
+ });
 }
 export function changeAt(points,hours){
  if(!points.length)return null;
@@ -57,6 +79,7 @@ export function validateBackup(value){
  for(const [id,c] of Object.entries(value.history)){
   if(c.id!==id||typeof c.name!=='string'||!categories.includes(c.category)||!Array.isArray(c.points)||c.points.length>500||c.points.some(p=>!Number.isFinite(p.t)||!Number.isFinite(p.price)||p.price<150))throw new Error('Nieprawidłowe dane karty w kopii.');
  }
+ for(const c of Object.values(value.history)){if(c.averages)for(const kind of ['daily','hourly']){const p=c.averages[kind];if(!Array.isArray(p)||p.length>500||p.some(v=>!Number.isFinite(v.t)||!Number.isFinite(v.price)||v.price<150))throw Error('Nieprawidłowa historia średnich.');}}
  if(value.events.some(e=>e.requirements&&([e.requirements.minRating,e.requirements.maxRating].some(n=>n!=null&&(!Number.isInteger(n)||n<1||n>99))||(e.requirements.minRating!=null&&e.requirements.maxRating!=null&&e.requirements.minRating>e.requirements.maxRating))))throw new Error('Nieprawidłowe filtry ratingu.');
  if(value.events.some(e=>!['packs','rewards','sbc','evo','promo'].includes(e.type)||typeof e.title!=='string'||!Array.isArray(e.ids)||!['all','fodder','playable','ids'].includes(e.scope)||![e.start,e.end,e.created].every(Number.isFinite)||e.end<=e.start))throw new Error('Nieprawidłowe wydarzenie w kopii.');
  return value;
