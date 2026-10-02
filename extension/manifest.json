@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FC Scanner — test cen PC",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Odczyt i ręczna weryfikacja ceny PC z otwartej strony FUTBIN.",
   "permissions": [
     "activeTab",
@@ -24,8 +24,19 @@
         "https://www.futbin.com/27/player/*"
       ],
       "js": [
-        "content.js"
+        "content.js",
+        "history-bridge.js"
       ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.futbin.com/27/player/*"
+      ],
+      "js": [
+        "history-page.js"
+      ],
+      "world": "MAIN",
       "run_at": "document_idle"
     }
   ]
