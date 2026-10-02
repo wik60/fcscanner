@@ -19,7 +19,7 @@ function render(){
   $('filteredCount').textContent=result.rejected.length;$('export').disabled=!result.picks.length;
  }catch(e){latest=null;$('picks').replaceChildren();$('tableWrap').hidden=true;$('export').disabled=true;message(e.message,true);}
 }
-function setData(data,label,isDemo=false){data=normalizeInput(data);rank(data,options());rows=data;demo=isDemo;origin=label;message('');render();}
+function setData(data,label,isDemo=false){data=normalizeInput(data);rank(data,options());rows=data;demo=isDemo;origin=label;message('');render();window.dispatchEvent(new CustomEvent('fc-prices',{detail:{rows,demo}}));}
 $('settings').addEventListener('submit',e=>{e.preventDefault();message('');render();});
 $('demo').addEventListener('click',async()=>{try{const r=await fetch('./sample.json');if(!r.ok)throw new Error('Cannot load demo.');const sample=await r.json();sample.forEach(row=>row.updated_at=new Date().toISOString());setData(sample,'Fictional sample',true);}catch(e){message(e.message,true);}});
 $('file').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>5000000)throw new Error('Maximum file size is 5 MB.');const text=await f.text();setData(f.name.toLowerCase().endsWith('.csv')?parseCSV(text):JSON.parse(text),`Imported file: ${f.name}`);}catch(e){message(e.message,true);}finally{e.target.value='';}});
