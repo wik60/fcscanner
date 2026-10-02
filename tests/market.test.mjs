@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {mergeHistory,analyze,changeAt,validateBackup} from '../market.mjs';
+const now=Date.now(),H=3600000;
+const rows=Array.from({length:9},(_,i)=>({game:'fc27',platform:'pc',card_id:'1',name:'Example',market_price:4000+i*100,updated_at:new Date(now-(8-i)*H).toISOString()}));
+let history=mergeHistory({},rows);assert.equal(history['1'].points.length,9);history=mergeHistory(history,rows);assert.equal(history['1'].points.length,9);
+assert.equal(analyze(history['1'],[],now).direction,'Sygnał wzrostowy');
+assert.equal(analyze(mergeHistory({},rows.slice(-1))['1'],[],now).direction,'Za mało danych');
+assert.equal(analyze(history['1'],[],now+H).direction,'Nieaktualne ceny');
+const event={id:'e',title:'SBC',type:'sbc',scope:'fodder',ids:[],start:now-H,end:now+H,created:now-H};
+assert.equal(analyze(history['1'],[event],now).active,0);history['1'].category='fodder';assert.equal(analyze(history['1'],[event],now).active,1);
+assert.equal(analyze(history['1'],[{...event,created:now+H}],now).active,0);
+assert.equal(analyze(history['1'],[{...event,end:now}],now).active,0);
+assert.equal(changeAt(history['1'].points,24),null);
+assert.equal(Object.keys(mergeHistory({},[{...rows[0],market_price:0}])).length,0);
+assert.equal(validateBackup({schema:1,history,events:[event]}).events.length,1);
+assert.throws(()=>validateBackup({schema:1,history:{bad:{id:'bad',name:'x',category:'unknown',points:[{t:1,price:NaN}]}},events:[]}));
+console.log('Market history and event signal checks passed.');
