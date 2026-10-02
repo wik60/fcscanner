@@ -1,3 +1,11 @@
+## Market analyzer
+
+The Pages app now stores observation history, card categories and manually entered market events in local browser storage. It seeds three price observations from the user-provided 2026-10-02 export, preserving timestamps. These are not refreshed automatically. Export backups to retain history across browsers/devices. The fictional history demo is isolated from real data and never saved.
+
+Each exact card/version has up to 500 observations; duplicate timestamps are not added. The chart shows observed prices, not predicted prices. Card categories are assigned manually because the source can omit rating/version metadata. Event scope can be exact IDs, user-labelled SBC cards, playable cards, or an explicitly uncertain broad market scope. Start/end times and event creation times are retained.
+
+Signal engine v1 is an **unvalidated heuristic**, not a trained forecasting model. A direction requires at least four observations over six hours and a latest observation no older than 30 minutes. It combines a +/-2% six-hour trend signal with active, manually scoped supply/demand events. Event contribution is capped at +/-2. Signals are qualitative, carry low confidence, and have a heuristic 6–24h horizon. It cannot predict exact prices, detect live underpriced auctions, estimate sell-through, or provide calibrated probabilities. There is no automatic SBC/store/rewards feed and no claimed backtest accuracy.
+
 # FC Scanner · GitHub Pages
 
 ## Apify import
