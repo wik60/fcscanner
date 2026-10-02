@@ -1,3 +1,4 @@
+import {trend,matchesEvent} from './features.mjs';
 // Transparent heuristic signals, not a trained model or calibrated probabilities.
 const HOUR=3600000;
 export function mergeHistory(history,rows){
@@ -8,7 +9,7 @@ export function mergeHistory(history,rows){
   const card=next[id]||{id,name:String(r.name??id).replace(/ EA FC 27 Prices and Rating$/i,''),version:String(r.version??''),category:'unknown',points:[]};
   const old=card.points.find(p=>p.t===t);if(!old)card.points.push({t,price});
   card.points.sort((a,b)=>a.t-b.t);card.points=card.points.slice(-500);
-  card.rating=r.rating??card.rating??null;card.source_url=r.source_url??card.source_url;
+  card.rating=card.manualRating?card.rating:(r.rating??card.rating??null);card.source_url=r.source_url??card.source_url;
   next[id]=card;
  }
  return next;
@@ -30,7 +31,7 @@ export function analyze(card,events,now=Date.now()){
  const delta6=changeAt(points,6),delta24=changeAt(points,24);
  if(adequate&&delta6!==null){technical=delta6>=2?1:delta6<=-2?-1:0;reasons.push(`Zmiana w około 6 h: ${delta6.toFixed(1)}%.`);}
  else reasons.push(`Historia: ${points.length} obserwacji przez ${span.toFixed(1)} h; minimum to 4 obserwacje i 6 h.`);
- const active=events.filter(e=>e.start<=now&&e.end>now&&e.created<=now&&(e.ids?.includes(card.id)||e.scope==='all'||(e.scope==='fodder'&&card.category==='fodder')||(e.scope==='playable'&&card.category==='playable')));
+ const active=events.filter(e=>e.start<=now&&e.end>now&&e.created<=now&&matchesEvent(card,e));
  for(const e of active){
   const sign={packs:-1,rewards:-1,sbc:1,evo:1,promo:-1}[e.type];if(sign===undefined)continue;
   eventScore+=sign;
@@ -41,6 +42,9 @@ export function analyze(card,events,now=Date.now()){
  const conflict=active.some(e=>['sbc','evo'].includes(e.type))&&active.some(e=>['packs','rewards','promo'].includes(e.type));
  if(conflict)risks.push('Jednocześnie występują sygnały zwiększonego popytu i podaży.');
  if(!active.length)reasons.push('Brak przypisanych aktywnych wydarzeń.');
+ const averages=trend(points,now);
+ if(averages.ma6!==null&&averages.ma24!==null)reasons.push('Średnia odczytów 6 h: '+Math.round(averages.ma6)+'; 24 h: '+Math.round(averages.ma24)+'.');
+ if(averages.deviation!==null)reasons.push('Cena względem średniej 24 h: '+averages.deviation.toFixed(1)+'%.');
  const score=technical+Math.max(-2,Math.min(2,eventScore));
  let direction=!adequate?'Za mało danych':Math.abs(score)<1?'Brak wyraźnego kierunku':score>0?'Sygnał wzrostowy':'Sygnał spadkowy';
  if(age>30){direction='Nieaktualne ceny';risks.unshift(`Ostatni odczyt ma ${Math.round(age)} min. Odśwież ceny przed decyzją.`);}
@@ -53,6 +57,7 @@ export function validateBackup(value){
  for(const [id,c] of Object.entries(value.history)){
   if(c.id!==id||typeof c.name!=='string'||!categories.includes(c.category)||!Array.isArray(c.points)||c.points.length>500||c.points.some(p=>!Number.isFinite(p.t)||!Number.isFinite(p.price)||p.price<150))throw new Error('Nieprawidłowe dane karty w kopii.');
  }
+ if(value.events.some(e=>e.requirements&&([e.requirements.minRating,e.requirements.maxRating].some(n=>n!=null&&(!Number.isInteger(n)||n<1||n>99))||(e.requirements.minRating!=null&&e.requirements.maxRating!=null&&e.requirements.minRating>e.requirements.maxRating))))throw new Error('Nieprawidłowe filtry ratingu.');
  if(value.events.some(e=>!['packs','rewards','sbc','evo','promo'].includes(e.type)||typeof e.title!=='string'||!Array.isArray(e.ids)||!['all','fodder','playable','ids'].includes(e.scope)||![e.start,e.end,e.created].every(Number.isFinite)||e.end<=e.start))throw new Error('Nieprawidłowe wydarzenie w kopii.');
  return value;
 }
