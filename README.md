@@ -1,3 +1,13 @@
+# FC Scanner · GitHub Pages
+
+## Apify import
+
+The browser app accepts JSON exports from `getdataforme/futbin-category-details` directly. Use Apify's Dataset → Export → JSON, then import that file on the site. The adapter reads only `prices.pc.lowestPrice`, retains `scrapedAt`, and checks `/27/player/` URLs. Console-only records and other game years are rejected. The documented Actor sample is FC26; live FC27 compatibility is not yet verified.
+
+Apify exports contain reference prices, not purchasable auctions, sales volume, or one-hour history. The app displays **Price target**, zero suggested copies, and estimated profit **at your target buy price**. It does not invent missing listings or history. Always confirm the target in-game. Freshness reflects scrape time, not necessarily FUTBIN's underlying price update time.
+
+Actor pricing was listed as from $9 / 1,000 results during setup. No paid run has been started. Automatic refresh needs an Apify data pipeline, credentials kept outside public page code, and a tested fresh output. Do not paste tokens in issues, source files, or chat. Actor documentation: https://apify.com/getdataforme/futbin-category-details
+
 ## GitHub Pages app
 
 Open https://wik60.github.io/fcscanner/ after Pages deployment. The browser app runs entirely in JavaScript: adjust your balance/reserve, enter fresh PC observations, import CSV/JSON, calculate ranked bid ceilings, and export picks. The fictional demo is explicitly labelled. Data is kept in memory for the current tab only. Refreshing the page clears it.
