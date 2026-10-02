@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {trend,positionValue,matchesEvent} from '../features.mjs';
+const hour=3600000,now=Date.now();
+assert.equal(trend([{t:now,price:1000}],now).ma24,null);
+const points=Array.from({length:25},(_,i)=>({t:now-(24-i)*hour,price:1000+i*10}));
+assert.ok(trend(points,now).ma6>trend(points,now).ma24);
+assert.deepEqual(positionValue({buy:1000,quantity:2},1200),{cost:2000,net:2280,profit:280,breakEven:1053});
+assert.equal(positionValue({buy:1000,quantity:2},null).profit,null);
+assert.equal(matchesEvent({id:'1',category:'fodder',rating:null},{scope:'fodder',requirements:{minRating:86}}),false);
+assert.equal(matchesEvent({id:'1',category:'fodder',rating:85},{scope:'fodder',requirements:{minRating:86}}),false);
+assert.equal(matchesEvent({id:'1',category:'fodder',rating:86},{scope:'fodder',requirements:{minRating:86,maxRating:88}}),true);
+console.log('Trend, portfolio tax and SBC filter tests passed');
