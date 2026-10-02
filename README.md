@@ -1,3 +1,11 @@
+## GitHub Pages app
+
+Open https://wik60.github.io/fcscanner/ after Pages deployment. The browser app runs entirely in JavaScript: adjust your balance/reserve, enter fresh PC observations, import CSV/JSON, calculate ranked bid ceilings, and export picks. The fictional demo is explicitly labelled. Data is kept in memory for the current tab only. Refreshing the page clears it.
+
+**Live FUTBIN connection is not available:** direct FUTBIN access returned HTTP 403 during integration checks. No verified public FC27 PC API was identified. This app does not claim automatic live picks. The feed field supports public HTTPS JSON feeds matching the schema below; the server must allow CORS. Never paste secret API keys into it.
+
+GitHub Pages publishing source: `main` branch, `/ (root)`. `.nojekyll` allows the static app to be served directly. GitHub Actions checks both the Python and browser engines.
+
 # FC27 PC Trader
 
 A standalone Python watchlist scanner for a 200,000-coin PC budget. It ranks supplied price observations and outputs a browser report with card names, maximum bid prices, conservative sell targets, net profit, and suggested quantities.
