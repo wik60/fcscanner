@@ -1,0 +1,32 @@
+name: Sync completed Apify prices
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: apify-price-sync
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check required secrets
+        env:
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python -c "import os; assert all(os.getenv(k) for k in ['APIFY_API_TOKEN','SUPABASE_SERVICE_ROLE_KEY']), 'Add required repository secrets before syncing'"
+      - name: Import latest completed dataset (does not start paid Actor runs)
+        env:
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          APIFY_DATASET_ID: ${{ vars.APIFY_DATASET_ID }}
+          SUPABASE_URL: https://ztxbktelvqfisafywmvx.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python collectors/apify_import.py
